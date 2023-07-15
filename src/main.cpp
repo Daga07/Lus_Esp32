@@ -1,46 +1,39 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
+#include <SD.h> 
+#include <SPIFFS.h>
 #include <WiFi.h>
 #include <FirebaseESP32.h>
 
 uint32_t delayMS;
-#define sensor_agua 21
-#define sensor_motor 4
-#define dths 2
+#define sensor_agua 32
+#define sensor_motor 14
+#define dths 4
 #define DHTTYPE DHT11   
 DHT_Unified dht(dths, DHTTYPE);
-
-
 
 #define FIREBASE_HOST "tower-garden-default-rtdb.firebaseio.com"
 #define FIREBASE_AUTH "h4oZhjYR0M38YcH7kPvRljWnGn6SEJKubiCKbmi1"
 FirebaseData tower_garden;
 String ruta ="tower-garden";// difinimos ruta de firebase
 
-const char * ssid = "daga07";
-const char * password = "Daga0777";
+const char * ssid = "YUYIS_21815";
+const char * password = "Daga13maa";
 
 float h;
 float t;
+int  sensorValue;
+int aus;
 
 
-
-
-
-
- //float apagado = 2000;// (86400000/4);
- //int ensendido = 3000;//(420000);
-// float level = 0;
-//float niveltiempo = 3000;
-// int expression = 3;
  unsigned long dthpreviosmili= 0;
  unsigned long dthcurrenmilli= 0;
- const long  humedad = 1000;
+ const long  humedad = 9000;
 
  unsigned long nivelpreviosmili= 0;
  unsigned long nivelcurrenmilli= 0;
- const long  nivel = 2000;
+ const long  nivel = 9000;
 
  unsigned long reletpreviosmili= 0;
  unsigned long reletcurrenmilli= 0;
@@ -50,43 +43,40 @@ float t;
  void setup(){
   Serial.begin(115200);
   dht.begin();
-  pinMode(dths,OUTPUT); 
-  pinMode(sensor_agua,OUTPUT);
+  pinMode(dths,OUTPUT);
+  pinMode(sensor_agua,INPUT_PULLUP);
   pinMode(sensor_motor,OUTPUT);
 
-  
   WiFi.begin(ssid, password);
-  delay(3000);
- 
-  Serial.print("Se esta conectando a la red wifi denominada");
-  Serial.println(ssid);
-  
-  while (WiFi.status() != WL_CONNECTED){
-    delay(500);
+  Serial.println("Se esta conectando a la red wifi denominada");
+
+ while (WiFi.status() != WL_CONNECTED){
+    delay(1000);
     Serial.println(".");
   }
   Serial.println("");
   Serial.println("Wifi connected");
   Serial.println("IP address:");
-  Serial.println(WiFi.localIP());
+ Serial.println(WiFi.localIP());
 
   // Conexion a Firebase
   Firebase.begin(FIREBASE_HOST,FIREBASE_AUTH);
-  Firebase.reconnectWiFi(true);
+
 
   //Temperatura y Humedad
  Serial.println(F("DTH text"));
   dht.begin();
-  if (isnan(h) || isnan(t)){
+  if (isnan(h)||isnan(t)){
     Serial.println(F("Falla en la lectura del sensor"));
     return;
   }
+
+ 
  } 
  void loop(){
-   float level;
-
   dthcurrenmilli = millis();
-  if(dthcurrenmilli - dthpreviosmili >= humedad){
+  
+ if(dthcurrenmilli - dthpreviosmili >= humedad){
     dthpreviosmili = dthcurrenmilli;
     sensors_event_t event;
   dht.temperature().getEvent(&event);
@@ -97,49 +87,35 @@ float t;
   h= event.temperature;
   t= event.relative_humidity;
 
-   Serial.print(F("Humedad: "+"%")); //La F() siginifica que lo que esta dentro del parentesis se escribe en la FLASH
+   Serial.print(F("Humedad: %")); //La F() siginifica que lo que esta dentro del parentesis se escribe en la FLASH
    Serial.print(h);
    Serial.println("");
-   Serial.print(F("Temperatura:"+"°C")); //La F() siginifica que lo que esta dentro del parentesis se escribe en la FLASH
+   Serial.print(F("Temperatura: °C")); //La F() siginifica que lo que esta dentro del parentesis se escribe en la FLASH
    Serial.print(t);
    Serial.println("");
    
    Firebase.setInt(tower_garden,ruta+"/Humedad",t);
    Firebase.setInt(tower_garden,ruta+"/Temperatura",h);
-
-   Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-    Serial.print(F("Humidity: "));
-    Serial.print(event.relative_humidity);
-    Serial.println(F("%"));
-
-   /* Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-  }
-  dht.humidity().getEvent(&event);
-  if (isnan(event.relative_humidity)) {
-    Serial.println(F("Error reading humidity!"));
-  }
-  else {
-    Serial.print(F("Humidity: "));
-    Serial.print(event.relative_humidity);
-    Serial.println(F("%"));
-  }*/
+ 
   }
     Serial.println("-------------------");
- }
 
  
-   nivelcurrenmilli = millis();
+  nivelcurrenmilli = millis();
   if(nivelcurrenmilli - nivelpreviosmili >= nivel){
     nivelpreviosmili = nivelcurrenmilli;
-    level  = analogRead(sensor_agua);
-    Serial.print("Nivel de agua: ");
-    Serial.println(level);
+     int sensorValue = analogRead(sensor_agua);
+  
+  Serial.println(sensorValue);
+  Firebase.setFloat(tower_garden,ruta+"/Nivel de agua", sensorValue);
     Serial.println("-------------------");
+    
+
  }
+
+
+ }
+ 
 
      reletcurrenmilli = millis();
     digitalWrite(sensor_motor,HIGH);  
@@ -149,7 +125,7 @@ float t;
    digitalWrite(sensor_motor, LOW);
    Serial.println("Motor encendido");
    delay(ensender_motor);
- 
+   
   Serial.println("-------------------");
   }
  }
